@@ -12,21 +12,22 @@ import java.util.regex.Pattern;
 
 import cn.droidlover.xdroid.kit.Codec;
 import cn.droidlover.xdroid.kit.Kits;
-import cn.droidlover.xdroid.kit.SingletonCtx;
-import cn.droidlover.xdroid.kit.XDroidConf;
+import cn.droidlover.xdroid.XDroidConf;
 
 /**
  * Created by wanglei on 2016/11/28.
  */
 
-public class DiskCache extends SingletonCtx<DiskCache> {
+public class DiskCache implements ICache {
     private DiskLruCache cache;
 
-    static String TAG_CACHE = "=====createTime{createTime}expireMills{expireMills}";
+    static String TAG_CACHE = "=====createTime{createTime_v}expireMills{expireMills_v}";
     static String REGEX = "=====createTime\\{(\\d{1,})\\}expireMills\\{(\\d{1,})\\}";
     private Pattern compile;
 
     public static final long NO_CACHE = -1L;
+
+    private static DiskCache instance;
 
     private DiskCache(Context context) {
         compile = Pattern.compile(REGEX);
@@ -39,6 +40,17 @@ public class DiskCache extends SingletonCtx<DiskCache> {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public static DiskCache getInstance(Context context) {
+        if (instance == null) {
+            synchronized (DiskCache.class) {
+                if (instance == null) {
+                    instance = new DiskCache(context.getApplicationContext());
+                }
+            }
+        }
+        return instance;
     }
 
     public void put(String key, String value) {
@@ -56,13 +68,19 @@ public class DiskCache extends SingletonCtx<DiskCache> {
 
             DiskLruCache.Editor editor = cache.edit(name);
             StringBuilder content = new StringBuilder(value);
-            content.append(TAG_CACHE.replace("createTime", "" + Calendar.getInstance().getTimeInMillis()).replace("expireMills", "" + expireMills));
+            content.append(TAG_CACHE.replace("createTime_v", "" + Calendar.getInstance().getTimeInMillis()).replace("expireMills_v", "" + expireMills));
             editor.set(0, content.toString());
             editor.commit();
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
+
+    @Override
+    public void put(String key, Object value) {
+        put(key, value != null ? value.toString() : null, NO_CACHE);
+    }
+
 
     public String get(String key) {
         try {
@@ -81,7 +99,7 @@ public class DiskCache extends SingletonCtx<DiskCache> {
                     }
                     int index = content.indexOf("=====createTime");
 
-                    if ((createTime + expireMills < Calendar.getInstance().getTimeInMillis())
+                    if ((createTime + expireMills > Calendar.getInstance().getTimeInMillis())
                             || expireMills == NO_CACHE) {
                         return content.substring(0, index);
                     } else {
@@ -126,7 +144,7 @@ public class DiskCache extends SingletonCtx<DiskCache> {
         return Codec.MD5.getMessageDigest(key.getBytes());
     }
 
-    public static File getDiskCacheDir(Context context, String dirName) {
+    private static File getDiskCacheDir(Context context, String dirName) {
         String cachePath;
         if (Environment.MEDIA_MOUNTED.equals(Environment.getExternalStorageState())
                 || !Environment.isExternalStorageRemovable()) {
@@ -137,12 +155,7 @@ public class DiskCache extends SingletonCtx<DiskCache> {
         return new File(cachePath + File.separator + dirName);
     }
 
-    @Override
-    protected DiskCache newInstance(Context context) {
-        return new DiskCache(context);
-    }
-
-    public String getCacheDir() {
+    private String getCacheDir() {
         return XDroidConf.CACHE_DISK_DIR;
     }
 

@@ -1,7 +1,5 @@
 package cn.droidlover.xdroid.event;
 
-import cn.droidlover.xdroid.imageloader.ILFactory;
-
 /**
  * Created by wanglei on 2016/12/2.
  */
@@ -11,7 +9,7 @@ public class BusFactory {
 
     public static IBus getBus() {
         if (bus == null) {
-            synchronized (ILFactory.class) {
+            synchronized (BusFactory.class) {
                 if (bus == null) {
                     bus = new EventBusImpl();
                 }

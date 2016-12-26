@@ -1,5 +1,6 @@
 package cn.droidlover.xdroid.base;
 
+import android.app.Activity;
 import android.content.Context;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
@@ -19,10 +20,9 @@ import cn.droidlover.xdroid.kit.KnifeKit;
 public abstract class XFragment extends Fragment implements UiCallback {
     protected View rootView;
     protected LayoutInflater layoutInflater;
-    protected Context context;
+    protected Activity context;
     protected UiDelegate uiDelegate;
     private Unbinder unbinder;
-
 
     @Nullable
     @Override
@@ -55,7 +55,9 @@ public abstract class XFragment extends Fragment implements UiCallback {
     @Override
     public void onAttach(Context context) {
         super.onAttach(context);
-        this.context = context;
+        if (context instanceof Activity) {
+            this.context = (Activity) context;
+        }
     }
 
     @Override
@@ -65,9 +67,13 @@ public abstract class XFragment extends Fragment implements UiCallback {
     }
 
     @Override
+    public boolean useEventBus() {
+        return false;
+    }
+
+    @Override
     public void onDestroyView() {
         super.onDestroyView();
-        KnifeKit.unbind(unbinder);
         BusFactory.getBus().unregister(this);
         getUiDelegate().destory();
     }
